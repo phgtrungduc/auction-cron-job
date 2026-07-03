@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  auction-cron-job:
+    build: .
+    container_name: auction-cron-job
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - CRON_ENABLED=${CRON_ENABLED:-true}
+      - CORRECTION_MODE=${CORRECTION_MODE:-dry-run}
+      - SCAN_BATCH_SIZE=${SCAN_BATCH_SIZE:-500}
+      - TZ=Asia/Ho_Chi_Minh
+    env_file:
+      - .env
+    networks:
+      - auction-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  auction-network:
+    external: true

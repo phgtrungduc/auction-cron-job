@@ -1,0 +1,21 @@
+[Unit]
+Description=Auction Cron Job - Data Correction Service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/auction-cron-job
+Environment="NODE_ENV=production"
+EnvironmentFile=/opt/auction-cron-job/.env
+ExecStart=/usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=auction-cron-job
+
+[Install]
+WantedBy=multi-user.target
