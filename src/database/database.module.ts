@@ -7,14 +7,22 @@ import { AuctionNotice } from './entities/auction-notice.entity';
   imports: [
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        url: configService.get<string>('DATABASE_URL'),
-        entities: [AuctionNotice],
-        synchronize: false, // Schema do .NET migration quản lý
-        logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
-        ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const dbUrl = configService.get<string>('DATABASE_URL');
+        if (!dbUrl) {
+          throw new Error(
+            'DATABASE_URL is required. Set it via .env file or environment variable.',
+          );
+        }
+        return {
+          type: 'postgres',
+          url: dbUrl,
+          entities: [AuctionNotice],
+          synchronize: false, // Schema do .NET migration quản lý
+          logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
+          ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        };
+      },
     }),
     TypeOrmModule.forFeature([AuctionNotice]),
   ],

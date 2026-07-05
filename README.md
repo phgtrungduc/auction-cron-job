@@ -237,10 +237,26 @@ npm install
 
 ### 2. Cấu hình môi trường
 
+**Cách 1: Dùng file .env (khuyến nghị cho local)**
+
 ```bash
 cp .env.example .env
 # Chỉnh DATABASE_URL trong .env
 ```
+
+**Cách 2: Dùng environment variables (không cần .env)**
+
+```bash
+# Linux/Mac
+export DATABASE_URL="postgresql://user:pass@localhost:5432/auction_db"
+export CRON_ENABLED=true
+
+# Windows PowerShell
+$env:DATABASE_URL="postgresql://user:pass@localhost:5432/auction_db"
+$env:CRON_ENABLED="true"
+```
+
+> **Chi tiết:** Xem [CONFIG.md](CONFIG.md) để biết tất cả cách config và troubleshooting.
 
 ### 3. Chạy development
 

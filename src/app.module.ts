@@ -8,6 +8,7 @@ import { CorrectionModule } from './correction/correction.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      ignoreEnvFile: false, // Cho phép chạy mà không có .env (đọc từ system env)
     }),
     ScheduleModule.forRoot(),
     CorrectionModule,
