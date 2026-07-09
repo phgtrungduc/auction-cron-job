@@ -349,3 +349,19 @@ Khi bạn có logic sửa dữ liệu, làm theo các bước:
 | EF configuration | `Auction-Project/AuctionPlatform/Infrastructure/Data/Configurations/AuctionNoticeConfiguration.cs` |
 | Crawl ingest | `Auction-Project/.../IngestNormalizedNoticeFromCrawlCommand.cs` |
 | Crawler service (pattern scheduler) | `auction-crawler/scripts/run.py` |
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [README.md](./README.md) | Overview và quick start |
+| [STRUCTURE.md](./STRUCTURE.md) | Chi tiết cấu trúc project và luồng chạy |
+| [QUICKSTART.md](./QUICKSTART.md) | Hướng dẫn setup và chạy nhanh |
+| [CONFIG.md](./CONFIG.md) | Chi tiết về configuration |
+| [LOGGING.md](./LOGGING.md) | **Hệ thống logging (Pino)** |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) | Hướng dẫn deploy production |
+| [ARCHITECTURE_COMPARISON.md](./ARCHITECTURE_COMPARISON.md) | So sánh cấu trúc cron job vs API |
+| [COMMON_UTILS.md](./COMMON_UTILS.md) | Common utilities (date, currency, string) |
+| [HANDLER_LINK_ORG.md](./HANDLER_LINK_ORG.md) | Handler link auction_org_id |

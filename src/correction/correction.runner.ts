@@ -1,9 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Inject } from '@nestjs/common';
 import { NoticeScanner, ScanOptions } from './notice.scanner';
 import { NoticeApplier, CorrectionMode } from './notice.applier';
 import { CorrectionHandler, ScanResult } from './correction-handler.interface';
 import { AuctionNotice } from '@/database/entities/auction-notice.entity';
+import { createLogger } from '@/common/logger';
+import { formatNumber } from '@/common/utils';
 
 export interface RunOptions {
   mode?: CorrectionMode;
@@ -13,22 +16,21 @@ export interface RunOptions {
 
 /**
  * CorrectionRunner - orchestrator chính.
- * 
+ *
  * - Quét batch từ NoticeScanner
  * - Gọi các CorrectionHandler đã đăng ký
  * - Gửi patch tới NoticeApplier
  */
 @Injectable()
 export class CorrectionRunner {
-  private readonly logger = new Logger(CorrectionRunner.name);
+  private readonly logger = createLogger(CorrectionRunner.name);
   private readonly defaultMode: CorrectionMode;
 
   constructor(
     private readonly scanner: NoticeScanner,
     private readonly applier: NoticeApplier,
     private readonly configService: ConfigService,
-    // Inject danh sách handlers sau khi có
-    // @Inject('CORRECTION_HANDLERS') private readonly handlers: CorrectionHandler[],
+    @Inject('CORRECTION_HANDLERS') private readonly handlers: CorrectionHandler[],
   ) {
     this.defaultMode = this.configService.get<CorrectionMode>('CORRECTION_MODE', 'dry-run');
   }
@@ -40,7 +42,10 @@ export class CorrectionRunner {
     const mode = options.mode ?? this.defaultMode;
     const handlers = this.getActiveHandlers(options.handlers);
 
-    this.logger.log(`Starting correction run: mode=${mode}, handlers=${handlers.length}`);
+    this.logger.log(
+      `Starting correction run: mode=${mode}, handlers=${handlers.length} ` +
+        `(${handlers.map((h) => h.name).join(', ')})`,
+    );
 
     if (handlers.length === 0) {
       this.logger.warn('No handlers registered - skipping correction logic');
@@ -60,7 +65,8 @@ export class CorrectionRunner {
     const durationMs = Date.now() - startTime;
 
     this.logger.log(
-      `Correction run completed: scanned=${scanned}, batches=${batches}, duration=${durationMs}ms`,
+      `Correction run completed: scanned=${formatNumber(scanned)}, ` +
+        `batches=${batches}, duration=${durationMs}ms`,
     );
 
     return { scanned, batches, durationMs };
@@ -119,7 +125,10 @@ export class CorrectionRunner {
   /**
    * Lấy giá trị trước khi đổi (cho audit log).
    */
-  private extractBefore(notice: AuctionNotice, patch: Partial<AuctionNotice>): Record<string, unknown> {
+  private extractBefore(
+    notice: AuctionNotice,
+    patch: Partial<AuctionNotice>,
+  ): Record<string, unknown> {
     const before: Record<string, unknown> = {};
     for (const key of Object.keys(patch)) {
       before[key] = notice[key];
@@ -129,12 +138,11 @@ export class CorrectionRunner {
 
   /**
    * Lọc handlers theo name (nếu có).
-   * Hiện tại chưa có handlers nên return [].
    */
   private getActiveHandlers(filterNames?: string[]): CorrectionHandler[] {
-    // TODO: Khi có handlers, filter theo name
-    // if (!filterNames) return this.handlers;
-    // return this.handlers.filter(h => filterNames.includes(h.name));
-    return [];
+    if (!filterNames || filterNames.length === 0) {
+      return this.handlers;
+    }
+    return this.handlers.filter((h) => filterNames.includes(h.name));
   }
 }

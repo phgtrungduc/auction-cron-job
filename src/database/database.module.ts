@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AuctionNotice } from './entities/auction-notice.entity';
+import { AuctionOrganization } from './entities/auction-organization.entity';
 
 @Module({
   imports: [
@@ -14,17 +15,26 @@ import { AuctionNotice } from './entities/auction-notice.entity';
             'DATABASE_URL is required. Set it via .env file or environment variable.',
           );
         }
+
+        // SSL configuration
+        const enableSsl = configService.get<string>('DATABASE_SSL', 'true') === 'true';
+
         return {
           type: 'postgres',
           url: dbUrl,
-          entities: [AuctionNotice],
-          synchronize: false, // Schema do .NET migration quản lý
+          entities: [AuctionNotice, AuctionOrganization],
+          synchronize: false,
           logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
-          ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+          ssl: enableSsl ? { rejectUnauthorized: false } : false,
+          extra: {
+            max: configService.get<number>('DATABASE_POOL_MAX', 10),
+            connectionTimeoutMillis: 30000,
+            idleTimeoutMillis: 30000,
+          },
         };
       },
     }),
-    TypeOrmModule.forFeature([AuctionNotice]),
+    TypeOrmModule.forFeature([AuctionNotice, AuctionOrganization]),
   ],
   exports: [TypeOrmModule],
 })

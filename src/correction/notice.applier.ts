@@ -8,7 +8,7 @@ export type CorrectionMode = 'dry-run' | 'apply';
 
 /**
  * NoticeApplier - ghi các thay đổi vào DB.
- * 
+ *
  * Giai đoạn hiện tại: stub, chưa ghi thật.
  * Sau khi có handler + data_correction_log: implement transaction UPDATE + INSERT log.
  */
@@ -23,7 +23,7 @@ export class NoticeApplier {
 
   /**
    * Apply các thay đổi vào 1 notice.
-   * 
+   *
    * @param noticeId - ID bản ghi cần update
    * @param patch - Field cần đổi
    * @param meta - Metadata để audit
@@ -55,8 +55,6 @@ export class NoticeApplier {
     //   // INSERT vào data_correction_log
     // });
 
-    this.logger.log(
-      `[APPLY] Updated notice ${noticeId} via ${meta.handler}: ${fields.join(', ')}`,
-    );
+    this.logger.log(`[APPLY] Updated notice ${noticeId} via ${meta.handler}: ${fields.join(', ')}`);
   }
 }

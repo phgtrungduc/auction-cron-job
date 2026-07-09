@@ -5,7 +5,7 @@ import { Logger } from '@nestjs/common';
 
 /**
  * CLI entry point cho các command chạy tay.
- * 
+ *
  * Usage:
  *   npm run correction:scan                    # quét full
  *   npm run correction:scan -- --notice-id=123 # quét 1 notice

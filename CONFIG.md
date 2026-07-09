@@ -71,6 +71,8 @@ docker-compose up
 | Biến | Bắt buộc | Mặc định | Mô tả |
 |------|----------|----------|-------|
 | `DATABASE_URL` | ✅ **Có** | _none_ | PostgreSQL connection string |
+| `DATABASE_SSL` | Không | `true` | `true` (enable SSL), `false` (disable) |
+| `DATABASE_POOL_MAX` | Không | `10` | Connection pool size |
 | `CRON_ENABLED` | Không | `true` | Bật/tắt scheduler |
 | `CORRECTION_MODE` | Không | `dry-run` | `dry-run` hoặc `apply` |
 | `SCAN_BATCH_SIZE` | Không | `500` | Số bản ghi mỗi batch |
@@ -85,13 +87,20 @@ docker-compose up
 
 ## Ví dụ DATABASE_URL
 
-### Local development:
-```
+### Local development (no SSL):
+```env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/auction_db
+DATABASE_SSL=false
 ```
 
-### Production với SSL:
+### Supabase (with SSL):
+```env
+DATABASE_URL=postgresql://postgres.xxx:pass@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require
+DATABASE_SSL=true
 ```
+
+### Production cloud DB (with SSL):
+```env
 DATABASE_URL=postgresql://user:pass@db.example.com:5432/auction_db?sslmode=require
 DATABASE_SSL=true
 ```

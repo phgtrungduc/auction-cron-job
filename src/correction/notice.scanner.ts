@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, IsNull } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AuctionNotice } from '@/database/entities/auction-notice.entity';
+import { createLogger } from '@/common/logger';
+import { formatNumber } from '@/common/utils';
 
 export interface ScanOptions {
   batchSize?: number;
@@ -12,14 +14,14 @@ export interface ScanOptions {
 
 /**
  * NoticeScanner - đọc auction_notices theo batch từ PostgreSQL.
- * 
+ *
  * - Quét theo cursor id ASC
  * - Bỏ qua soft-deleted (deleted_at IS NOT NULL)
  * - Batch size configurable
  */
 @Injectable()
 export class NoticeScanner {
-  private readonly logger = new Logger(NoticeScanner.name);
+  private readonly logger = createLogger(NoticeScanner.name);
   private readonly defaultBatchSize: number;
 
   constructor(
@@ -53,7 +55,9 @@ export class NoticeScanner {
       return;
     }
 
-    this.logger.log(`Starting batch scan: batchSize=${batchSize}, startFromId=${lastId}`);
+    this.logger.log(
+      `Starting batch scan: batchSize=${formatNumber(batchSize)}, startFromId=${lastId}`,
+    );
 
     while (true) {
       const batch = await this.noticeRepo.find({
@@ -72,7 +76,9 @@ export class NoticeScanner {
       batchCount++;
       lastId = batch[batch.length - 1].id;
 
-      this.logger.debug(`Batch ${batchCount}: ${batch.length} notices (id ${batch[0].id} - ${lastId})`);
+      this.logger.debug(
+        `Batch ${batchCount}: ${formatNumber(batch.length)} notices (id ${batch[0].id} - ${lastId})`,
+      );
 
       yield batch;
     }

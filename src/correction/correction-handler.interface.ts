@@ -3,7 +3,7 @@ import { AuctionNotice } from '@/database/entities/auction-notice.entity';
 /**
  * Interface cho một correction handler.
  * Mỗi handler = một logic sửa dữ liệu độc lập.
- * 
+ *
  * Bạn thêm logic sau bằng cách implement interface này.
  */
 export interface CorrectionHandler {
@@ -15,10 +15,10 @@ export interface CorrectionHandler {
 
   /**
    * Nhận một notice, trả về các field cần update.
-   * 
+   *
    * @param notice - Bản ghi từ auction_notices
    * @returns Partial object chứa field cần đổi, hoặc null nếu không sửa gì
-   * 
+   *
    * Ví dụ:
    * ```ts
    * async correct(notice: AuctionNotice) {
