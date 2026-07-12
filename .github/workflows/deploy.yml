@@ -32,7 +32,7 @@ jobs:
         run: npm prune --production
 
       - name: 📦 Package release
-        run: tar -czf auction-cron-job-release.tar.gz dist node_modules package.json
+        run: tar -czf auction-cron-job-release.tar.gz dist node_modules package.json auction-cron-job.service
 
       - name: 🚚 Upload to server
         uses: appleboy/scp-action@v0.1.7
