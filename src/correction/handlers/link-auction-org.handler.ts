@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { CorrectionHandler } from '../correction-handler.interface';
 import { AuctionNotice } from '@/database/entities/auction-notice.entity';
 import { AuctionOrganization } from '@/database/entities/auction-organization.entity';
@@ -15,6 +15,9 @@ import { truncate } from '@/common/utils';
  * 2. Lấy auction_org_name từ notice
  * 3. Tìm kiếm trong auction_organizations theo fullname (normalize: lowercase + trim)
  * 4. Update auction_org_id nếu tìm thấy match duy nhất
+ *
+ * Note: Handler này ghi trực tiếp vào database (auction_notices).
+ * Không sử dụng NoticeApplier pattern.
  *
  * Confidence:
  * - High: Tìm thấy 1 match duy nhất → auto-fix
@@ -31,7 +34,16 @@ export class LinkAuctionOrgHandler implements CorrectionHandler {
   constructor(
     @InjectRepository(AuctionOrganization)
     private readonly orgRepo: Repository<AuctionOrganization>,
+    @InjectRepository(AuctionNotice)
+    private readonly noticeRepo: Repository<AuctionNotice>,
   ) {}
+
+  /**
+   * Filter: Chỉ scan notices chưa có auction_org_id và có auction_org_name.
+   */
+  getFilterQuery(qb: SelectQueryBuilder<AuctionNotice>): void {
+    qb.andWhere('n.auction_org_id IS NULL').andWhere('n.auction_org_name IS NOT NULL');
+  }
 
   async correct(notice: AuctionNotice): Promise<Partial<AuctionNotice> | null> {
     // 1. Skip nếu đã có auction_org_id
@@ -60,14 +72,17 @@ export class LinkAuctionOrgHandler implements CorrectionHandler {
       return null;
     }
 
-    // 5. Tìm thấy match → update
+    // 5. Tìm thấy match → update trực tiếp vào DB
+    await this.noticeRepo.update(notice.id, {
+      auctionOrgId: orgId,
+    });
+
     this.logger.log(
-      `Linking notice ${notice.id} (${truncate(notice.auctionOrgName, 40)}) ` + `→ org ${orgId}`,
+      `Linked notice ${notice.id} (${truncate(notice.auctionOrgName, 40)}) → org ${orgId}`,
     );
 
-    return {
-      auctionOrgId: orgId,
-    };
+    // Handler đã xử lý xong, không cần update notice
+    return null;
   }
 
   /**

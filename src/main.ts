@@ -14,7 +14,6 @@ async function bootstrap() {
 
   logger.log(`Auction Cron Job service running on port ${port}`);
   logger.log(`Cron enabled: ${process.env.CRON_ENABLED !== 'false'}`);
-  logger.log(`Correction mode: ${process.env.CORRECTION_MODE || 'dry-run'}`);
   logger.log(`Timezone: ${process.env.TZ || 'Asia/Ho_Chi_Minh'}`);
   logger.log(`Database: ${process.env.DATABASE_URL ? '***connected***' : 'not configured'}`);
 }

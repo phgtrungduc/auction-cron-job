@@ -1,15 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Inject } from '@nestjs/common';
 import { NoticeScanner, ScanOptions } from './notice.scanner';
-import { NoticeApplier, CorrectionMode } from './notice.applier';
 import { CorrectionHandler, ScanResult } from './correction-handler.interface';
 import { AuctionNotice } from '@/database/entities/auction-notice.entity';
 import { createLogger } from '@/common/logger';
 import { formatNumber } from '@/common/utils';
 
 export interface RunOptions {
-  mode?: CorrectionMode;
   handlers?: string[]; // Chỉ chạy các handler cụ thể (theo name)
   scanOptions?: ScanOptions;
 }
@@ -19,57 +16,69 @@ export interface RunOptions {
  *
  * - Quét batch từ NoticeScanner
  * - Gọi các CorrectionHandler đã đăng ký
- * - Gửi patch tới NoticeApplier
+ * - Handlers tự xử lý việc ghi vào DB
  */
 @Injectable()
 export class CorrectionRunner {
   private readonly logger = createLogger(CorrectionRunner.name);
-  private readonly defaultMode: CorrectionMode;
 
   constructor(
     private readonly scanner: NoticeScanner,
-    private readonly applier: NoticeApplier,
-    private readonly configService: ConfigService,
     @Inject('CORRECTION_HANDLERS') private readonly handlers: CorrectionHandler[],
-  ) {
-    this.defaultMode = this.configService.get<CorrectionMode>('CORRECTION_MODE', 'dry-run');
-  }
+  ) {}
 
   /**
    * Chạy tất cả handlers (hoặc subset) trên toàn bộ auction_notices.
+   * Mỗi handler chạy riêng với filter tối ưu của nó.
    */
   async runAll(options: RunOptions = {}): Promise<ScanResult> {
-    const mode = options.mode ?? this.defaultMode;
     const handlers = this.getActiveHandlers(options.handlers);
 
     this.logger.log(
-      `Starting correction run: mode=${mode}, handlers=${handlers.length} ` +
+      `Starting correction run: handlers=${handlers.length} ` +
         `(${handlers.map((h) => h.name).join(', ')})`,
     );
 
     if (handlers.length === 0) {
       this.logger.warn('No handlers registered - skipping correction logic');
+      return { scanned: 0, batches: 0, durationMs: 0 };
     }
 
     const startTime = Date.now();
-    let scanned = 0;
-    let batches = 0;
+    let totalScanned = 0;
+    let totalBatches = 0;
 
-    for await (const batch of this.scanner.scanBatches(options.scanOptions)) {
-      batches++;
-      scanned += batch.length;
+    // Run each handler separately with its own filter
+    for (const handler of handlers) {
+      this.logger.log(`Running handler: ${handler.name}`);
 
-      await this.processBatch(batch, handlers, mode);
+      let handlerScanned = 0;
+      let handlerBatches = 0;
+
+      for await (const batch of this.scanner.scanBatchesForHandler(handler, options.scanOptions)) {
+        handlerBatches++;
+        handlerScanned += batch.length;
+
+        await this.processBatch(batch, [handler]);
+      }
+
+      totalScanned += handlerScanned;
+      totalBatches += handlerBatches;
+
+      this.logger.log(
+        `Handler ${handler.name} completed: ` +
+          `scanned=${formatNumber(handlerScanned)}, batches=${handlerBatches}`,
+      );
     }
 
     const durationMs = Date.now() - startTime;
 
     this.logger.log(
-      `Correction run completed: scanned=${formatNumber(scanned)}, ` +
-        `batches=${batches}, duration=${durationMs}ms`,
+      `Correction run completed: scanned=${formatNumber(totalScanned)}, ` +
+        `batches=${totalBatches}, duration=${durationMs}ms`,
     );
 
-    return { scanned, batches, durationMs };
+    return { scanned: totalScanned, batches: totalBatches, durationMs };
   }
 
   /**
@@ -78,7 +87,6 @@ export class CorrectionRunner {
   private async processBatch(
     notices: AuctionNotice[],
     handlers: CorrectionHandler[],
-    mode: CorrectionMode,
   ): Promise<void> {
     for (const notice of notices) {
       // Bỏ qua notice protected
@@ -88,21 +96,8 @@ export class CorrectionRunner {
 
       for (const handler of handlers) {
         try {
-          const patch = await handler.correct(notice);
-
-          if (!patch || Object.keys(patch).length === 0) {
-            continue;
-          }
-
-          await this.applier.apply(
-            notice.id,
-            patch,
-            {
-              handler: handler.name,
-              before: this.extractBefore(notice, patch),
-            },
-            mode,
-          );
+          // Handler tự xử lý việc ghi vào DB
+          await handler.correct(notice);
         } catch (error) {
           this.logger.error(
             `Handler ${handler.name} failed for notice ${notice.id}: ${error.message}`,
@@ -120,20 +115,6 @@ export class CorrectionRunner {
    */
   private isProtected(notice: AuctionNotice): boolean {
     return notice.deletedAt !== null || notice.statusSelfReported;
-  }
-
-  /**
-   * Lấy giá trị trước khi đổi (cho audit log).
-   */
-  private extractBefore(
-    notice: AuctionNotice,
-    patch: Partial<AuctionNotice>,
-  ): Record<string, unknown> {
-    const before: Record<string, unknown> = {};
-    for (const key of Object.keys(patch)) {
-      before[key] = notice[key];
-    }
-    return before;
   }
 
   /**

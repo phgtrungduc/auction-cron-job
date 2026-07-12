@@ -1,0 +1,73 @@
+name: 🚀 CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - prod
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: 🏗️ Build & Deploy NestJS Cron Job
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: ⚙️ Build NestJS
+        run: npm run build
+
+      - name: 🧹 Prune node_modules to production only
+        run: npm prune --production
+
+      - name: 📦 Package release
+        run: tar -czf auction-cron-job-release.tar.gz dist node_modules package.json
+
+      - name: 🚚 Upload to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          port: 8852
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: auction-cron-job-release.tar.gz
+          target: /tmp
+
+      - name: 🔄 Extract & Deploy on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          port: 8852
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            set -euo pipefail
+            APP_DIR="/home/bn888_user/app/auction-cron-job"
+            ARCHIVE="/tmp/auction-cron-job-release.tar.gz"
+            
+            # Clean and recreate temporary deployment folder (except .env file if it exists)
+            mkdir -p "$APP_DIR"
+            
+            # Extract archive
+            tar -xzf "$ARCHIVE" -C "$APP_DIR"
+            rm -f "$ARCHIVE"
+            
+            # Copy systemd service file and reload daemon
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S cp "$APP_DIR/auction-cron-job.service" /etc/systemd/system/
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S systemctl daemon-reload
+            
+            # Restart the systemd service
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S systemctl restart auction-cron-job
+            
+            echo "Auction-Cron-Job deployed successfully and service restarted."

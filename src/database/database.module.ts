@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AuctionNotice } from './entities/auction-notice.entity';
 import { AuctionOrganization } from './entities/auction-organization.entity';
+import { AssetOwnerEntity } from './entities/asset-owner-entity.entity';
+import { AssetOwnerNoticeLink } from './entities/asset-owner-notice-link.entity';
 
 @Module({
   imports: [
@@ -22,7 +24,7 @@ import { AuctionOrganization } from './entities/auction-organization.entity';
         return {
           type: 'postgres',
           url: dbUrl,
-          entities: [AuctionNotice, AuctionOrganization],
+          entities: [AuctionNotice, AuctionOrganization, AssetOwnerEntity, AssetOwnerNoticeLink],
           synchronize: false,
           logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
           ssl: enableSsl ? { rejectUnauthorized: false } : false,
@@ -34,7 +36,7 @@ import { AuctionOrganization } from './entities/auction-organization.entity';
         };
       },
     }),
-    TypeOrmModule.forFeature([AuctionNotice, AuctionOrganization]),
+    TypeOrmModule.forFeature([AuctionNotice, AuctionOrganization, AssetOwnerEntity, AssetOwnerNoticeLink]),
   ],
   exports: [TypeOrmModule],
 })

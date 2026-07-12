@@ -1,4 +1,5 @@
 import { AuctionNotice } from '@/database/entities/auction-notice.entity';
+import { SelectQueryBuilder } from 'typeorm';
 
 /**
  * Interface cho một correction handler.
@@ -30,6 +31,33 @@ export interface CorrectionHandler {
    * ```
    */
   correct(notice: AuctionNotice): Promise<Partial<AuctionNotice> | null>;
+
+  /**
+   * (Optional) Apply filter conditions to query builder.
+   * Handler tự định nghĩa điều kiện để chỉ load notices cần xử lý.
+   *
+   * Giúp tối ưu performance - chỉ scan notices thực sự cần, thay vì load all rồi skip.
+   *
+   * @param qb - TypeORM SelectQueryBuilder với alias 'n' cho auction_notices
+   *
+   * Ví dụ:
+   * ```ts
+   * getFilterQuery(qb: SelectQueryBuilder<AuctionNotice>) {
+   *   qb.andWhere('n.auction_org_id IS NULL')
+   *     .andWhere('n.auction_org_name IS NOT NULL');
+   * }
+   * ```
+   */
+  getFilterQuery?(qb: SelectQueryBuilder<AuctionNotice>): void;
+
+  /**
+   * (Optional) In-memory filter - check trước khi call correct().
+   * Dùng khi logic filter phức tạp không thể express trong SQL.
+   *
+   * @param notice - Bản ghi từ database
+   * @returns true nếu handler cần xử lý notice này
+   */
+  shouldProcess?(notice: AuctionNotice): boolean | Promise<boolean>;
 }
 
 /**

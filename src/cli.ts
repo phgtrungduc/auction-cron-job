@@ -10,7 +10,7 @@ import { Logger } from '@nestjs/common';
  *   npm run correction:scan                    # quét full
  *   npm run correction:scan -- --notice-id=123 # quét 1 notice
  *   npm run correction:scan -- --batch-size=100
- *   npm run correction:run -- --handler=fix-xxx --dry-run
+ *   npm run correction:run -- --handler=fix-xxx
  */
 async function cli() {
   const logger = new Logger('CLI');
@@ -50,12 +50,10 @@ async function cli() {
 async function handleScan(runner: CorrectionRunner, args: string[], logger: Logger) {
   const noticeId = getArg(args, '--notice-id');
   const batchSize = getArg(args, '--batch-size');
-  const mode = getArg(args, '--dry-run') !== null ? 'dry-run' : 'apply';
 
-  logger.log(`Running scan: mode=${mode}`);
+  logger.log(`Running scan`);
 
   const result = await runner.runAll({
-    mode: mode as any,
     scanOptions: {
       noticeId: noticeId ? parseInt(noticeId, 10) : undefined,
       batchSize: batchSize ? parseInt(batchSize, 10) : undefined,
@@ -67,17 +65,15 @@ async function handleScan(runner: CorrectionRunner, args: string[], logger: Logg
 
 async function handleRun(runner: CorrectionRunner, args: string[], logger: Logger) {
   const handler = getArg(args, '--handler');
-  const mode = getArg(args, '--dry-run') !== null ? 'dry-run' : 'apply';
 
   if (!handler) {
     logger.error('--handler is required for run command');
     process.exit(1);
   }
 
-  logger.log(`Running handler: ${handler}, mode=${mode}`);
+  logger.log(`Running handler: ${handler}`);
 
   const result = await runner.runAll({
-    mode: mode as any,
     handlers: [handler],
   });
 
@@ -96,7 +92,7 @@ Usage:
   npm run correction:scan                    # Quét full batch
   npm run correction:scan -- --notice-id=123 # Quét 1 notice
   npm run correction:scan -- --batch-size=100
-  npm run correction:run -- --handler=fix-xxx --dry-run
+  npm run correction:run -- --handler=fix-xxx
   `);
 }
 
