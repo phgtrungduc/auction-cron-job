@@ -1,5 +1,6 @@
 # So Sánh Cấu Trúc Code: Standard NestJS vs Auction Cron Job
 
+
 ## 1. Cấu Trúc Bạn Đề Xuất (Standard NestJS API Pattern)
 
 ```
